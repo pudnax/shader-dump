@@ -109,7 +109,7 @@ float map(vec3 p) {
 	float sphere = sdSphere(ps, size);
 	sphere = max(
 			sphere,
-            abs(fract(ps.x + pc.time * 0.3)) - .3
+            abs(fract(ps.x + pc.time * 0.3)) - .8
 			);
 
 	float size_tor = size * 1.5;

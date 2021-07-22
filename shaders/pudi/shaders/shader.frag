@@ -414,5 +414,11 @@ void main() {
 		col = nor * 0.5 + 0.5;
     }
 
+    /* vec2 q = (uv + 1) / 2.; */
+    /* col *= 0.5 + 0.5 * pow(20.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 1.1); */
+
+    vec2 q = uv * vec2(pc.resolution.y / pc.resolution.x, 1);
+    col *= smoothstep(0.0, 1.1, 1 - length(q * 0.4));
+
     out_color = vec4(col, 1.0);
 }
