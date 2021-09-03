@@ -1,0 +1,58 @@
+#version 460
+
+layout(std430, push_constant) uniform PushConstant {
+	vec3 pos;
+	float time;
+	vec2 resolution;
+	vec2 mouse;
+	bool mouse_pressed;
+    uint frame;
+} pc;
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout (binding = 0, rgba8) uniform image2D previous_frame;
+layout (binding = 1, rgba8) uniform image2D generic_texture;
+layout (binding = 2, rgba8) uniform image2D dummy_texture;
+
+layout (binding = 3, r32f) uniform image2D float_texture1;
+layout (binding = 4, r32f) uniform image2D float_texture2;
+
+layout(set = 1, binding = 0) uniform sampler1D fft_texture;
+
+float hash(float s) {
+	return fract(sin(s) * 45356.43451);
+}
+
+float B2( vec2 _P ) {
+    return mod( 2.0*_P.y + _P.x + 1.0, 4.0 );
+}
+
+float B4( vec2 _P ) {
+    vec2	P1 = mod( _P, 2.0 );					// (P >> 0) & 1
+    vec2	P2 = floor( 0.5 * mod( _P, 4.0 ) );		// (P >> 1) & 1
+    return 4.0*B2(P1) + B2(P2);
+}
+// Generates the 8x8 matrix
+float B8( vec2 _P ) {
+    vec2	P1 = mod( _P, 2.0 );					// (P >> 0) & 1
+    vec2	P2 = floor( 0.5 * mod( _P, 4.0 ) );		// (P >> 1) & 1
+    vec2	P4 = floor( 0.25 * mod( _P, 8.0 ) );	// (P >> 2) & 1
+    return 4.0*(4.0*B2(P1) + B2(P2)) + B2(P4);
+}
+
+void main() {
+    if (gl_GlobalInvocationID.x >= pc.resolution.x ||
+        gl_GlobalInvocationID.y >= pc.resolution.y) {
+      return;
+    }
+
+	/* if (pc.time < 0.5) { */
+		ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+		float c = B8(pos) / 254 / 2;
+		/* c *= cos(pos.x/15) * sin(pos.y/35); */
+		/* c += cos(pos.x * pos.y / 1); */
+
+		imageStore(float_texture1, pos, vec4(c));
+	/* } */
+}

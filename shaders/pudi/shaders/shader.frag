@@ -341,11 +341,28 @@ float scene(vec3 p) {
     }
 
     {
-		p.y += wiggle;
-        vec3 pt = vec3(abs(p.x), p.yz) + vec3(-0.17, -0.19, 0.0);
+        vec3 po = p;
+		po.y += wiggle;
+        vec3 pt = vec3(abs(po.x), po.yz) + vec3(-0.17, -0.19, 0.0);
         float scale = .1;
         float top = topping(pt / scale) * scale;
         res = smin(res, top, 0.03);
+    }
+
+    // Nose
+    {
+        vec3 po = p + vec3(0.0, 0.10, 0.3);
+        vec4 base =
+            sdBezier(po, vec3(0., 0.07, 0.0), vec3(0.0, 0.0, -0.05),
+                     vec3(0.01, 0.0, -0.2)) - 0.02;
+        base.x += ( base.y) * 0.01;
+        vec3 pe = vec3(abs(p.x), p.yz);
+        pe += vec3(-0.04, 0.10, 0.36);
+        float noseholes = length(pe) - 0.03;
+        base.x = smin(base.x, noseholes, 0.03);
+        res = min(res, base.x);
+        /* res = min(res, ); */
+        /* res = base.x; */
     }
 
     return res;
@@ -388,10 +405,13 @@ void main() {
 	ro += pc.pos;
 	/* ro += vec3(0.01, -0.5099998, 1.1099993); */
 
-    /* ro.xz = rot(ro.xz, sin(t)*0.3); */
-	/* rd.xz = rot(rd.xz, sin(t)*0.3); */
-    /* ro.xz = rot(ro.xz, (t)); */
-	/* rd.xz = rot(rd.xz, (t)); */
+    if (0 == 0) {
+        t = 0.3;
+        ro.xz = rot(ro.xz, sin(t) * 0.3);
+        rd.xz = rot(rd.xz, sin(t) * 0.3);
+        ro.xz = rot(ro.xz, (t));
+        rd.xz = rot(rd.xz, (t));
+    }
 
 	float dist = EPS.y;
 	bool hit = false;

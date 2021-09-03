@@ -49,7 +49,7 @@ void main() {
 
 	/* if (pc.time < 0.5) { */
 		ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
-		float c = B8(pos) / 254 / 2;
+		float c = B8(pos) / 256; // / 2
 		/* c *= cos(pos.x/15) * sin(pos.y/35); */
 		/* c += cos(pos.x * pos.y / 1); */
 

@@ -25,6 +25,12 @@ layout(std430, push_constant) uniform PushConstant {
     uint frame;
 } pc;
 
+float smax( float a, float b, float k ) {
+    k *= 1.4;
+    float h = max(k-abs(a-b),0.0);
+    return max(a, b) + h*h*h/(6.0*k*k);
+}
+
 #define MAX_LEVEL 1
 #define bayer2x2(a) (4-(a).x-((a).y<<1))%4
 float GetBayerFromCoordLevel(vec2 pixelpos) {
@@ -80,19 +86,21 @@ float noise3D(vec3 p) {
 
 	p = p*p*(3. - 2.*p);
 
+	p = p*p*p*(p*(p * 6. - 15.) + 10.);
+
 	h = mix(fract(sin(h)*43758.5453), fract(sin(h + s.x)*43758.5453), p.x);
 
-	/* h.xy = mix(h.xz, h.yw, p.y); */
+	h.xy = mix(h.xz, h.yw, p.y);
 
 	return mix(h.x, h.y, p.z);
 }
 
 vec3 ro = vec3(0., pc.time * 1.5, pc.time * 1.5);
 float map(vec3 p) {
-	float or = length(p - ro) - 3.5;
+	float or = length(p - ro) - 1.5;
 	float noise = noise3D(p * 2.) - .3;
 	/* return noise; */
-	return max(-or, noise);
+	return smax(-or, noise, -1.1);
 	/* return noise3D(p*2.)*.66 + noise3D(p*4.)*.34 - .4; */
 }
 
@@ -146,8 +154,9 @@ void main() {
         aD = (thD - abs(d) * 23. / 24.) / thD;
 
         if (aD > 0.) {
-            col += aD / (1. + t * t * 0.1) * 0.1 +
-                   (fract(rnd + i * 27.) - .5) * 0.01;
+            col += aD*aD*(3.-2.*aD)/(1. + t*t*0.125)*.1 + (fract(rnd + i*27.)-.5)*0.02;
+            /* col += aD / (1. + t * t * 0.1) * 0.1 + */
+            /*        (fract(rnd + i * 27.) - .5) * 0.01; */
 
             layers += 1;
         }

@@ -2,8 +2,6 @@
 
 // In the beginning, colours never existed. There's nothing that can be done before you...
 
-#include <prelude.glsl>
-
 layout(location = 0) in vec2 in_uv;
 layout(location = 0) out vec4 out_color;
 
@@ -25,62 +23,67 @@ layout(std430, push_constant) uniform PushConstant {
 	vec2 mouse;
 	bool mouse_pressed;
     uint frame;
+	float time_delta;
 } pc;
 
-const int steps = 1;
-const float time_delta = 0.15;
+#define PI acos(-1.)
 /* const float time_delta = 8; */
 
-mat2 rot(float a) {
-	float c = cos(a), s = sin(a);
-	return mat2(c,-s,s,c);
+float bayer8(void) {
+	ivec2 uv = ivec2(in_uv * pc.resolution);
+	uv %= 8;
+	return texelFetch(float_texture1, uv, 0).r;
 }
 
-float bayer8(vec2 uv) {
-	/* uv %= 8; */
-	return texture(float_texture1, in_uv).r;
-}
-
-float ramp(float t) {
-	/* t = smoothstep(0.,1.,t); */
-	/* t = smoothstep(0.,1.,t); */
+float ramp (float t) {
+	t = smoothstep(0., 1., t);
+	t = smoothstep(0., 1., t);
 	return t;
 }
 
-float sdf(vec2 p, float time) {
-	p *= 2;
-	p.y += 0.8;
-	p *= rot(PI * (4.17 ));
+vec4 PRand( uint seed )
+{
+    return vec4(
+        float((seed*0x73494U)&0xfffffU)/float(0x100000),
+    	float((seed*0xAF71FU)&0xfffffU)/float(0x100000),
+        float((seed*0x67a42U)&0xfffffU)/float(0x100000), // a bit stripey against x and z, but evens out over time
+        float((seed*0x95a8cU)&0xfffffU)/float(0x100000) // good vs x or y, not good against z
+        );
+}
 
+float sdf(vec2 p, float time) {
 	const float tau = acos(-1.) * 2.;
 	const float duration = 5.;
-	const float revolutions = 5;
+	const float revolutions = 40.;
 	float t = ramp(mod(time, duration) / duration) * revolutions;
-	float angle = t*tau;
-
-	float a = 2, b = 2, k = 3;
-	float r = a + b*cos(k*angle);
-	vec2 polars = r * vec2(cos(angle), sin(angle));
-	return length(p - polars) - .5;
+	float angle = t * tau;
+	return length(p - vec2(sin(angle), cos(angle))) - 0.2;
 }
 
 void main() {
     vec2 uv = (in_uv + -0.5) * 2.0 / vec2(pc.resolution.y / pc.resolution.x, 1);
-	uv *= 2.;
+    uv *= 2.;
 
-    float edge = dFdx(uv.x) * 0.5;
+    float edge = fwidth(uv.x) * 0.5;
+
+	vec2 fragCoord = in_uv*pc.resolution;
+
+    uint pseed =
+        uint(int(floor(pc.time)) << 16) + (uint(fragCoord.y) << 8U) + uint(fragCoord.x);
+
+    vec4 prand = PRand(pseed);
 
     float c = 0.;
+    const int steps = 4;
     for (int i = 0; i < steps; ++i) {
-        float subsample = bayer8(in_uv);
-        float time =
-            pc.time + ((float(i) + subsample) / float(steps) - 0.5) * time_delta;
+        float subsample = prand.y;
+        float time = pc.time + ((float(i) + subsample) / float(steps) - 0.5) *
+                                   pc.time_delta;
         c += smoothstep(-edge, edge, sdf(uv, time));
     }
     c /= float(steps);
 
-    c = pow(c, .4545);
-	/* c= bayer8(in_uv); */
+    c = pow(c, 2.4545);
 
     out_color = vec4(vec3(c), 1.0);
 }
